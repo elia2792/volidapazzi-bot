@@ -1,0 +1,40 @@
+name: Hourly Travel Deals Scanner 24/7
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  scan-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Deals Scanner and Publish to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: 8775973003:AAFmjR3X34JxCBS5s827ymVPUUW2Fxm0SvM
+          TELEGRAM_CHANNEL_ID: '@VoliDaPazziItalia'
+          TRAVELPAYOUTS_MARKER: '773567'
+          AMAZON_AFFILIATE_TAG: 'scontai-21'
+        run: |
+          python main.py --scan-once
+
+      - name: Commit and Push Updated Deals Database
+        run: |
+          git config --global user.name 'TravelBot Runner'
+          git config --global user.email 'bot@volidapazzi.local'
+          git add deals.db
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update deals database [skip ci]" && git push)
