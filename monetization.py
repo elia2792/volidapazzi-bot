@@ -11,49 +11,41 @@ class MonetizationEngine:
         booking_aid: str = settings.BOOKING_AID,
         skyscanner_tag: str = settings.SKYSCANNER_AFFILIATE_TAG,
         civitatis_id: str = settings.CIVITATIS_AFFILIATE_ID,
-        getyourguide_id: str = settings.GETYOURGUIDE_PARTNER_ID,
         amazon_tag: str = settings.AMAZON_AFFILIATE_TAG
     ):
         self.tp_marker = travelpayouts_marker
         self.booking_aid = booking_aid
         self.skyscanner_tag = skyscanner_tag
         self.civitatis_id = civitatis_id
-        self.getyourguide_id = getyourguide_id
         self.amazon_tag = amazon_tag
 
     def generate_flight_search_url(self, departure: Optional[str], destination: Optional[str], fallback_url: str) -> str:
         """
-        Generates a direct monetized flight search link (via Travelpayouts / Aviasales / WayAway).
+        Generates a direct monetized Aviasales flight search URL.
+        Never wraps external URLs in tp.media to prevent 403 Forbidden.
         """
         if departure and destination:
             dep_clean = urllib.parse.quote_plus(departure.strip())
             dest_clean = urllib.parse.quote_plus(destination.strip())
-            base_search = f"https://www.aviasales.com/search?origin={dep_clean}&destination={dest_clean}"
-            return f"https://tp.media/r?marker={self.tp_marker}&p=4114&u={urllib.parse.quote(base_search)}"
+            return f"https://www.aviasales.com/search?marker={self.tp_marker}&origin={dep_clean}&destination={dest_clean}"
         
-        encoded_url = urllib.parse.quote(fallback_url)
-        return f"https://tp.media/r?marker={self.tp_marker}&p=4114&u={encoded_url}"
+        # Fallback to direct Aviasales landing with marker
+        return f"https://www.aviasales.com/?marker={self.tp_marker}"
 
     def generate_hotel_search_url(self, destination: Optional[str]) -> str:
+        """
+        Generates a direct Booking.com hotel search URL.
+        """
         dest_query = destination if destination else "Offerte Hotel"
         encoded = urllib.parse.quote_plus(dest_query)
-        booking_direct = f"https://www.booking.com/searchresults.html?ss={encoded}&lang=it"
-
+        base = f"https://www.booking.com/searchresults.html?ss={encoded}&lang=it"
         if self.booking_aid and self.booking_aid != "2400000":
-            return f"{booking_direct}&aid={self.booking_aid}"
-        
-        return f"https://tp.media/r?marker={self.tp_marker}&p=844&u={urllib.parse.quote(booking_direct)}"
-
-    def generate_activities_url(self, destination: Optional[str]) -> str:
-        dest_query = destination if destination else "Tour e Attività"
-        encoded = urllib.parse.quote_plus(dest_query)
-        if self.civitatis_id and self.civitatis_id != "travelbot":
-            return f"https://www.civitatis.com/it/search?q={encoded}&aff_id={self.civitatis_id}"
-        return f"https://tp.media/r?marker={self.tp_marker}&p=648&u={urllib.parse.quote(f'https://www.tiqets.com/it/search/?q={encoded}')}"
+            return f"{base}&aid={self.booking_aid}"
+        return base
 
     def generate_amazon_travel_gear_url(self, query: str = "zaino da viaggio cabina 40x20x25 ryanair") -> str:
         """
-        Generates an Amazon affiliate link with clean quote_plus formatting.
+        Generates an Amazon affiliate search link with clean quote_plus and scontai-21 tag.
         """
         encoded = urllib.parse.quote_plus(query)
         return f"https://www.amazon.it/s?k={encoded}&tag={self.amazon_tag}"
@@ -66,38 +58,38 @@ class MonetizationEngine:
         is_package: bool = False
     ) -> InlineKeyboardMarkup:
         """
-        Builds a multi-button Telegram inline keyboard with monetized affiliate buttons.
+        Builds clear, 100% working, monetized buttons for each deal.
         """
         buttons: List[List[InlineKeyboardButton]] = []
 
-        # Row 1: Flight / Package booking
-        flight_url = self.generate_flight_search_url(departure, destination, original_url)
-        main_button_label = "🏝️ Prenota Pacchetto" if is_package else "✈️ Prenota Volo / Tariffe"
-        buttons.append([
-            InlineKeyboardButton(text=main_button_label, url=flight_url)
-        ])
+        if is_package:
+            # 1. For packages: direct link to the package deal page (contains exact hotel + flights)
+            buttons.append([
+                InlineKeyboardButton(text="🏝️ Vedi e Prenota Pacchetto Completo", url=original_url)
+            ])
+            # 2. Hotel comparison option
+            if destination:
+                buttons.append([
+                    InlineKeyboardButton(text=f"🏨 Confronta Hotel a {destination}", url=self.generate_hotel_search_url(destination))
+                ])
+        else:
+            # 1. Flight / Error fare: Direct flight search + Original source
+            flight_search = self.generate_flight_search_url(departure, destination, original_url)
+            buttons.append([
+                InlineKeyboardButton(text="✈️ Cerca Volo / Tariffe", url=flight_search)
+            ])
+            buttons.append([
+                InlineKeyboardButton(text="🔎 Dettagli Offerta & Date Esatte", url=original_url)
+            ])
+            if destination:
+                buttons.append([
+                    InlineKeyboardButton(text=f"🏨 Cerca Hotel a {destination}", url=self.generate_hotel_search_url(destination))
+                ])
 
-        # Row 2: Hotel & Activities
-        second_row: List[InlineKeyboardButton] = []
-        if destination:
-            hotel_url = self.generate_hotel_search_url(destination)
-            second_row.append(InlineKeyboardButton(text="🏨 Cerca Hotel", url=hotel_url))
-
-            tours_url = self.generate_activities_url(destination)
-            second_row.append(InlineKeyboardButton(text="🎟️ Tour & Attività", url=tours_url))
-
-        if second_row:
-            buttons.append(second_row)
-
-        # Row 3: Amazon Travel Accessories (Direct monetization on EVERY deal!)
+        # Always include Amazon travel accessories button with scontai-21
         amazon_url = self.generate_amazon_travel_gear_url("zaino cabina 40x20x25 ryanair")
         buttons.append([
             InlineKeyboardButton(text="🎒 Zaini & Accessori Cabina (Amazon)", url=amazon_url)
-        ])
-
-        # Row 4: Full source details
-        buttons.append([
-            InlineKeyboardButton(text="🔎 Dettagli Completi & Date", url=original_url)
         ])
 
         return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -108,13 +100,10 @@ class MonetizationEngine:
         """
         buttons: List[List[InlineKeyboardButton]] = []
 
-        row1: List[InlineKeyboardButton] = []
         if destination:
-            hotel_url = self.generate_hotel_search_url(destination)
-            row1.append(InlineKeyboardButton(text=f"🏨 Hotel a {destination}", url=hotel_url))
-            tours_url = self.generate_activities_url(destination)
-            row1.append(InlineKeyboardButton(text="🎟️ Tour Guidati", url=tours_url))
-            buttons.append(row1)
+            buttons.append([
+                InlineKeyboardButton(text=f"🏨 Hotel Consigliati a {destination}", url=self.generate_hotel_search_url(destination))
+            ])
 
         gear_query = amazon_query or "zaino da viaggio cabina 40x20x25 ryanair"
         gear_url = self.generate_amazon_travel_gear_url(gear_query)
