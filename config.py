@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     SKYSCANNER_AFFILIATE_TAG: str = "travelbot"        # Skyscanner affiliate tracking
     CIVITATIS_AFFILIATE_ID: str = "travelbot"          # Civitatis affiliate tracking
     GETYOURGUIDE_PARTNER_ID: str = "travelbot"         # GetYourGuide tracking ID
-    AMAZON_AFFILIATE_TAG: str = "travelbot-21"         # Amazon Associates Tag (e.g. for travel gear)
+    AMAZON_AFFILIATE_TAG: str = "scontai-21"         # Amazon Associates Tag (e.g. for travel gear)
 
     # Storage
     DB_PATH: str = "deals.db"
