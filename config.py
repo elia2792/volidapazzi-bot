@@ -26,12 +26,13 @@ class Settings(BaseSettings):
     ALLOW_WORLDWIDE_ERROR_FARES: bool = True           # Always allow crazy global error fares
 
     # Monetization / Affiliate Settings
-    TRAVELPAYOUTS_MARKER: str = "500000"               # Replace with your Travelpayouts Partner Marker
-    BOOKING_AID: str = "2400000"                       # Replace with your Booking.com Affiliate ID
+    ENABLE_AFFILIATES: bool = False                    # Set to False to suspend affiliate links
+    TRAVELPAYOUTS_MARKER: str = "773567"               # Travelpayouts Partner Marker
+    BOOKING_AID: str = "2400000"                       # Booking.com Affiliate ID
     SKYSCANNER_AFFILIATE_TAG: str = "travelbot"        # Skyscanner affiliate tracking
     CIVITATIS_AFFILIATE_ID: str = "travelbot"          # Civitatis affiliate tracking
     GETYOURGUIDE_PARTNER_ID: str = "travelbot"         # GetYourGuide tracking ID
-    AMAZON_AFFILIATE_TAG: str = "scontai-21"         # Amazon Associates Tag (e.g. for travel gear)
+    AMAZON_AFFILIATE_TAG: str = "scontai-21"           # Amazon Associates Tag
 
     # Storage
     DB_PATH: str = "deals.db"

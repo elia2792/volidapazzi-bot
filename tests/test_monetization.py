@@ -1,8 +1,9 @@
 from monetization import MonetizationEngine
 
 
-def test_monetization_links():
+def test_monetization_links_enabled():
     engine = MonetizationEngine(
+        enable_affiliates=True,
         travelpayouts_marker="773567",
         booking_aid="2400000",
         skyscanner_tag="mytag",
@@ -22,14 +23,24 @@ def test_monetization_links():
     assert "tag=scontai-21" in amazon_url
 
 
-def test_keyboard_generation():
-    engine = MonetizationEngine(travelpayouts_marker="773567", amazon_tag="scontai-21")
-    kb_package = engine.build_deal_keyboard(
-        original_url="https://www.piratinviaggio.it/vacanza-santorini",
-        departure="Roma",
-        destination="Santorini",
-        is_package=True
+def test_monetization_links_disabled():
+    engine = MonetizationEngine(enable_affiliates=False)
+
+    flight_url = engine.generate_flight_search_url("Milano", "Tokyo", "https://example.com/original-deal")
+    assert flight_url == "https://example.com/original-deal"
+
+    hotel_url = engine.generate_hotel_search_url("Parigi")
+    assert "aid=" not in hotel_url
+
+    kb = engine.build_deal_keyboard(
+        original_url="https://example.com/deal",
+        departure="Milano",
+        destination="Londra",
+        is_package=False
     )
-    first_btn = kb_package.inline_keyboard[0][0]
-    assert first_btn.text == "🏝️ Vedi e Prenota Pacchetto Completo"
-    assert first_btn.url == "https://www.piratinviaggio.it/vacanza-santorini"
+    # Ensure NO Amazon button is present when disabled
+    for row in kb.inline_keyboard:
+        for btn in row:
+            assert "Amazon" not in btn.text
+            assert "scontai-21" not in btn.url
+            assert "marker=" not in btn.url
